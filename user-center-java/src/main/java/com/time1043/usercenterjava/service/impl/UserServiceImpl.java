@@ -15,6 +15,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.time1043.usercenterjava.contant.UserConstant.USER_LOGIN_STATE;
+
 /**
  * @author yingzhu
  * @description 针对表【user】的数据库操作Service实现
@@ -32,11 +34,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * 密码加密盐
      */
     private static final String SALT = "eleven";
-
-    /**
-     * 用户登录态键
-     */
-    public static final String USER_LOGIN_STATE = "userLoginState";
 
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
@@ -115,21 +112,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
 
         // 脱敏处理
-        User safetyUser = new User();
-        safetyUser.setId(user.getId());
-        safetyUser.setUsername(user.getUsername());
-        safetyUser.setUserAccount(user.getUserAccount());
-        safetyUser.setAvatarUrl(user.getAvatarUrl());
-        safetyUser.setGender(user.getGender());
-        safetyUser.setPhone(user.getPhone());
-        safetyUser.setEmail(user.getEmail());
-        safetyUser.setUserStatus(user.getUserStatus());
-        safetyUser.setCreateTime(user.getCreateTime());
+        User safetyUser = getSafetyUser(user);
 
         // 记录用户的登录态 session cookie
         request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
 
         // 限流策略...
+        return safetyUser;
+    }
+
+    /**
+     * 用户信息脱敏处理
+     *
+     * @param originalUser
+     * @return
+     */
+    @Override
+    public User getSafetyUser(User originalUser) {
+        User safetyUser = new User();
+        safetyUser.setId(originalUser.getId());
+        safetyUser.setUsername(originalUser.getUsername());
+        safetyUser.setUserAccount(originalUser.getUserAccount());
+        safetyUser.setAvatarUrl(originalUser.getAvatarUrl());
+        safetyUser.setGender(originalUser.getGender());
+        safetyUser.setPhone(originalUser.getPhone());
+        safetyUser.setEmail(originalUser.getEmail());
+        safetyUser.setUserRole(originalUser.getUserRole());
+        safetyUser.setUserStatus(originalUser.getUserStatus());
+        safetyUser.setCreateTime(originalUser.getCreateTime());
         return safetyUser;
     }
 }
