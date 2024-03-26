@@ -88,8 +88,8 @@
 
   登陆注册：前端、后端
 
-  - 后端：注册和登录、service controller和测试
-  - 前端：
+  - 后端：注册和登录、service controller和接口测试
+  - 前端：个性化、删代码；对接后端接口
   
   用户管理：前端、后端
   
@@ -106,7 +106,7 @@
 
 - 前置环境
 
-  nodejs稳定版、[Ant Design Pro](https://pro.ant.design/zh-CN/docs/getting-started)
+  nodejs稳定版、[Ant Design Pro](https://pro.ant.design/zh-CN/docs/getting-started)、[umi文档](https://umijs.org/docs/guides/getting-started)
 
 - 一些问题
 
@@ -179,7 +179,7 @@
 
   删除项目根路径下 jest.config.js 文件：jest.config.js 测试相关的配置文件 
 
-  删除项目根路径下 playwright.config.ts 文件：playwright.config.ts -> 自动化测试工具，帮你在火狐或谷歌自动测试，不用真实地打开浏览 器就能测试
+  删除项目根路径下 playwright.config.ts 文件：playwright.config.ts -> 自动化测试工具，帮你在火狐或谷歌自动测试，不用真实地打开浏览器就能测试
 
   ```
   cd 
@@ -932,28 +932,97 @@
 
 
 
-## 登陆注册的前端开发
+## 登陆注册的前端开发 (前后端交互)
 
 - 前端用户登录注册功能
 
+  ```
+  mkdir src/constants
+  touch src/constants/index.ts
+  
+  ```
+
+  D:\code2\java-code\user-center\web-ts\src\constants\index.ts
+
+  ```typescript
+  export const SYSTEM_LOGO = "/icons/logo.png";
+  export const GITHUB_LINK = "https://github.com/Time1043";
+  ```
+
+  D:\code2\java-code\user-center\web-ts\src\pages\User\Login\index.tsx (删)
+
+  D:\code2\java-code\user-center\web-ts\src\components\Footer\index.tsx (删)
+
+  D:\code2\java-code\user-center\web-ts\src\services\ant-design-pro\typings.d.ts (修改请求数据结构)
+
+  ```typescript
+  
+    type LoginParams = {
+      userAccount?: string;
+      userPassword?: string;
+      autoLogin?: boolean;
+      type?: string;
+    };
+  
+  ```
+
   
 
+- 前端向后端发请求 
+
+  ajax、axios封装ajax
+
+  改上层代码
+
+  D:\code2\java-code\user-center\web-ts\src\pages\User\Login\index.tsx
+
+  ```tsx
   
-
+    const handleSubmit = async (values: API.LoginParams) => {
+      try {
+        // 登录
+        const msg = await login({...values, type,});
+          
+  ```
   
-
-  1
-
-- 校验用户
-
+  D:\code2\java-code\user-center\web-ts\src\services\ant-design-pro\api.ts
   
-
+  ```typescript
   
-
+  /** 登录接口 POST /api/login/account */
+  export async function login(body: API.LoginParams, options?: { [key: string]: any }) {
+    return request<API.LoginResult>('/api/login/account', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: body,
+      ...(options || {}),
+    });
+  }
   
-
+  ```
   
-
+  D:\code2\java-code\user-center\web-ts\src\app.tsx (启动时初始化 定义全局配置)
+  
+  ```tsx
+  /**
+   * @name request 配置，可以配置错误处理
+   * 它基于 axios 和 ahooks 的 useRequest 提供了一套统一的网络请求和错误处理方案。
+   * @doc https://umijs.org/docs/max/request#配置
+   */
+  export const request: RequestConfig = {
+    timeout: 1000,
+    errorConfig: {},
+    middlewares: [],
+    requestInterceptors: [],
+    responseInterceptors: [],
+    errorHandler,
+  };
+  ```
+  
+  
+  
   1
 
 
