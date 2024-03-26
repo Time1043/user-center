@@ -1,5 +1,5 @@
 import {Footer} from '@/components';
-import {login} from '@/services/ant-design-pro/api';
+import {register} from '@/services/ant-design-pro/api';
 import {
   AlipayCircleOutlined,
   LockOutlined,
@@ -79,37 +79,35 @@ const LoginMessage: React.FC<{
     />
   );
 };
-const Login: React.FC = () => {
+const Register: React.FC = () => {
   const [userLoginState, setUserLoginState] = useState<API.LoginResult>({});
   const [type, setType] = useState<string>('account');
-  const {initialState, setInitialState} = useModel('@@initialState');
   const {styles} = useStyles();
-  const fetchUserInfo = async () => {
-    const userInfo = await initialState?.fetchUserInfo?.();
-    if (userInfo) {
-      flushSync(() => {
-        setInitialState((s) => ({
-          ...s,
-          currentUser: userInfo,
-        }));
-      });
+
+  // 表单提交
+  const handleSubmit = async (values: API.RegisterParams) => {
+    // 前端校验 为后端分摊压力
+    const {userPassword, checkPassword} = values;
+    if (userPassword !== checkPassword) {
+      message.error('两次输入的密码不一致，请重新输入！');
+      return;
     }
-  };
-  const handleSubmit = async (values: API.LoginParams) => {
+
     try {
-      // 登录
-      const user = await login({...values, type,});
-      if (user) {
-        const defaultLoginSuccessMessage = '登录成功！';
+      // 注册
+      const id = await register(values);
+      if (id > 0) {
+        const defaultLoginSuccessMessage = '注册成功！';
         message.success(defaultLoginSuccessMessage);
-        await fetchUserInfo();
-        const urlParams = new URL(window.location.href).searchParams;
-        history.push(urlParams.get('redirect') || '/');
+
+        // const urlParams = new URL(window.location.href).searchParams;
+        // history.push(urlParams.get('redirect') || '/');
+        history.push('/user/login');
         return;
       }
       setUserLoginState(user);
     } catch (error) {
-      const defaultLoginFailureMessage = '登录失败，请重试！';
+      const defaultLoginFailureMessage = '注册失败，请重试！';
       console.log(error);
       message.error(defaultLoginFailureMessage);
     }
@@ -119,7 +117,7 @@ const Login: React.FC = () => {
     <div className={styles.container}>
       <Helmet>
         <title>
-          {'登录'}- {Settings.title}
+          {'注册'}- {Settings.title}
         </title>
       </Helmet>
       {/*<Lang />*/}
@@ -130,6 +128,11 @@ const Login: React.FC = () => {
         }}
       >
         <LoginForm
+          submitter={{
+            searchConfig: {
+              submitText: '注册',
+            }
+          }}
           contentStyle={{
             minWidth: 280,
             maxWidth: '75vw',
@@ -141,7 +144,7 @@ const Login: React.FC = () => {
             autoLogin: true,
           }}
           onFinish={async (values) => {
-            await handleSubmit(values as API.LoginParams);
+            await handleSubmit(values as API.RegisterParams);
           }}
         >
           <Tabs
@@ -151,7 +154,7 @@ const Login: React.FC = () => {
             items={[
               {
                 key: 'account',
-                label: '账户密码登录',
+                label: '账户密码注册',
               },
             ]}
           />
@@ -194,6 +197,25 @@ const Login: React.FC = () => {
                   },
                 ]}
               />
+              <ProFormText.Password
+                name="checkPassword"
+                fieldProps={{
+                  size: 'large',
+                  prefix: <LockOutlined/>,
+                }}
+                placeholder={'请再次输入密码'}
+                rules={[
+                  {
+                    required: true,
+                    message: '密码是必填项！',
+                  },
+                  {
+                    min: 8,
+                    type: 'string',
+                    message: '密码长度必须大于等于 8 位！',
+                  },
+                ]}
+              />
             </>
           )}
           <div
@@ -201,18 +223,6 @@ const Login: React.FC = () => {
               marginBottom: 24,
             }}
           >
-            <ProFormCheckbox noStyle name="autoLogin">
-              自动登录
-            </ProFormCheckbox>
-            <a
-              style={{
-                float: 'right',
-              }}
-              href={GITHUB_LINK}
-              target="_blank"
-            >
-              忘记密码请联系站长
-            </a>
           </div>
         </LoginForm>
       </div>
@@ -220,4 +230,4 @@ const Login: React.FC = () => {
     </div>
   );
 };
-export default Login;
+export default Register;

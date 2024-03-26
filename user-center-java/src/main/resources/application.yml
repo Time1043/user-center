@@ -10,6 +10,8 @@ spring:
     timeout: 86400 # 1天的session过期时间
 server:
   port: 8080
+  servlet:
+    context-path: /api  # 指定接口全局api前缀
 
 mybatis-plus:
   configuration:

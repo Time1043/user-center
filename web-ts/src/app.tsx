@@ -21,15 +21,15 @@ export async function getInitialState(): Promise<{
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
 }> {
   const fetchUserInfo = async () => {
-    try {
-      const msg = await queryCurrentUser({
-        skipErrorHandler: true,
-      });
-      return msg.data;
-    } catch (error) {
-      history.push(loginPath);
-    }
-    return undefined;
+    // try {
+    //   const msg = await queryCurrentUser({
+    //     skipErrorHandler: true,
+    //   });
+    //   return msg.data;
+    // } catch (error) {
+    //   history.push(loginPath);
+    // }
+    // return undefined;
   };
   // 如果不是登录页面，执行
   const {location} = history;
@@ -64,6 +64,10 @@ export const layout: RunTimeLayoutConfig = ({initialState, setInitialState}) => 
     footerRender: () => <Footer/>,
     onPageChange: () => {
       const {location} = history;
+      const whiteList = [loginPath, '/user/register'];
+      if (whiteList.includes(location.pathname)) {
+        return;  // 不做鉴权
+      }
       // 如果没有登录，重定向到 login
       if (!initialState?.currentUser && location.pathname !== loginPath) {
         history.push(loginPath);
@@ -132,5 +136,5 @@ export const layout: RunTimeLayoutConfig = ({initialState, setInitialState}) => 
  * @doc https://umijs.org/docs/max/request#配置
  */
 export const request: RequestConfig = {
-  timeout: 1000,
+  timeout: 100000,  // 超时时间
 };

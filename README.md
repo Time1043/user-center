@@ -76,6 +76,14 @@
 
   部署：服务器、容器(平台)
 
+- ant design家族
+
+  ant design 组件库 (封装了react)
+
+  [ant design procomponents](https://procomponents.ant.design/components/form)  面向业务 定制化 (封装了ant design)
+
+  ant design pro 后台管理系统 (由ant design、react、ant design procomponents及其他库组成)
+
 
 
 - 计划
@@ -89,12 +97,13 @@
   登陆注册：前端、后端
 
   - 后端：注册和登录、service controller和接口测试
-  - 前端：个性化、删代码；对接后端接口
+  - 前端：个性化、删代码；对接后端接口、获取用户的登录态
+  - 注销功能
   
   用户管理：前端、后端
   
   - 后端：用户管理接口 (用户查询 状态更改)
-  - 前端：
+  - 前端：开发；前端代码瘦身
   
   校验用户：星球用户
   
@@ -145,7 +154,7 @@
   npm run start
   ```
 
-  
+  一些前置问题
 
   ```
   npm install --global yarn
@@ -161,9 +170,7 @@
   yarn config set registry https://registry.yarnpkg.com
   ```
 
-  
-
-  瘦身项目
+- 瘦身项目
 
   删除国际化：执行 `i18n-remove` 脚本、删除项目路径下 src/locales 文件夹 
 
@@ -191,7 +198,7 @@
   rm -rf jest.config.js
   rm -rf playwright.config.ts 
   ```
-
+  
   
 
 
@@ -295,6 +302,8 @@
       timeout: 86400 # 1天的session过期时间
   server:
     port: 8080
+    servlet:
+      context-path: /api  # 指定接口全局api前缀
   
   mybatis-plus:
     configuration:
@@ -306,7 +315,7 @@
         logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
   
   ```
-
+  
   
 
 
@@ -953,7 +962,7 @@
 
   D:\code2\java-code\user-center\web-ts\src\components\Footer\index.tsx (删)
 
-  D:\code2\java-code\user-center\web-ts\src\services\ant-design-pro\typings.d.ts (修改请求数据结构)
+  D:\code2\java-code\user-center\web-ts\src\services\ant-design-pro\typings.d.ts (修改请求数据结构 仅是约束规范) (index.tsx传参名称)
 
   ```typescript
   
@@ -964,6 +973,15 @@
       type?: string;
     };
   
+    type RegisterParams = {
+      userAccount?: string;
+      userPassword?: string;
+      checkPassword?: string;
+      type?: string;
+    };
+    
+    type RegisterResult = number;
+  
   ```
 
   
@@ -972,9 +990,7 @@
 
   ajax、axios封装ajax
 
-  改上层代码
-
-  D:\code2\java-code\user-center\web-ts\src\pages\User\Login\index.tsx
+  D:\code2\java-code\user-center\web-ts\src\pages\User\Login\index.tsx 
 
   ```tsx
   
@@ -984,14 +1000,30 @@
         const msg = await login({...values, type,});
           
   ```
+
+  D:\code2\java-code\user-center\web-ts\src\pages\User\Register\index.tsx (html css js 追溯源码修改封装的页面文字)
+
   
+
   D:\code2\java-code\user-center\web-ts\src\services\ant-design-pro\api.ts
-  
+
   ```typescript
   
-  /** 登录接口 POST /api/login/account */
+  /** 登录接口 POST /api/user/login */
   export async function login(body: API.LoginParams, options?: { [key: string]: any }) {
-    return request<API.LoginResult>('/api/login/account', {
+    return request<API.LoginResult>('/api/user/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: body,
+      ...(options || {}),
+    });
+  }
+  
+  /** 注册接口 POST /api/user/register */
+  export async function register(body: API.RegisterParams, options?: { [key: string]: any }) {
+    return request<API.RegisterResult>('/api/user/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1002,32 +1034,69 @@
   }
   
   ```
-  
+
   D:\code2\java-code\user-center\web-ts\src\app.tsx (启动时初始化 定义全局配置)
-  
+
+  `history.push()` 白名单
+
   ```tsx
+  
   /**
    * @name request 配置，可以配置错误处理
    * 它基于 axios 和 ahooks 的 useRequest 提供了一套统一的网络请求和错误处理方案。
    * @doc https://umijs.org/docs/max/request#配置
    */
   export const request: RequestConfig = {
-    timeout: 1000,
-    errorConfig: {},
-    middlewares: [],
-    requestInterceptors: [],
-    responseInterceptors: [],
-    errorHandler,
+    timeout: 100000,  // 超时时间
   };
+  
   ```
+
   
+
+- 跨域问题 `8000` `8080`
+
+  正向代理：替客户端向服务器发送请求
+
+  反向代理：替服务器接受请求 (为了实现负载均衡 加一台代理服务器)
+
+  ![](res/Snipaste_2024-03-26_20-26-31.png)
+
+  实现代理：nginx、nodejs等充当服务器
+
+  后端配置：指定接口全局api前缀
+
+  前端请求
+
+  D:\code2\java-code\user-center\web-ts\config\proxy.ts
+
+  ```typescript
   
+    // 如果需要自定义本地开发服务器  请取消注释按需调整
+    dev: {
+      // localhost:8000/api/** -> https://preview.pro.ant.design/api/**
+      '/api/': {
+        // 要代理的地址
+        target: 'http://localhost:8080',
+        // 配置了这个可以从 http 代理到 https
+        // 依赖 origin 的功能可能需要这个，比如 cookie
+        changeOrigin: true,
+      },
+    },
+    
+  ```
+
   
+
+- 前端路由
+
+  D:\code2\java-code\user-center\web-ts\config\routes.ts
+
+  
+
+  
+
   1
-
-
-
-
 
 
 
