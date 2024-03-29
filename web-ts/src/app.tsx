@@ -10,6 +10,10 @@ import type {RequestConfig} from 'umi';
 
 const isDev = process.env.NODE_ENV === 'development';
 const loginPath = '/user/login';
+/**
+ * 无需用户登录态的白名单页面
+ */
+const NO_NEED_LOGIN_WHITE_LIST = [loginPath, '/user/register'];
 
 /**
  * @see  https://umijs.org/zh-CN/plugins/plugin-initial-state
@@ -21,30 +25,31 @@ export async function getInitialState(): Promise<{
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
 }> {
   const fetchUserInfo = async () => {
-    // try {
-    //   const msg = await queryCurrentUser({
-    //     skipErrorHandler: true,
-    //   });
-    //   return msg.data;
-    // } catch (error) {
-    //   history.push(loginPath);
-    // }
-    // return undefined;
+    try {
+      return await queryCurrentUser({
+        skipErrorHandler: true,
+      });
+    } catch (error) {
+      // history.push(loginPath);
+    }
+    return undefined;
   };
-  // 如果不是登录页面，执行
-  const {location} = history;
-  if (location.pathname !== loginPath) {
-    const currentUser = await fetchUserInfo();
+  // 如果是无需登录页面，不执行，不需要获取用户当前信息
+  if (NO_NEED_LOGIN_WHITE_LIST.includes(history.location.pathname)) {
     return {
+      // @ts-ignore
       fetchUserInfo,
-      currentUser,
       settings: defaultSettings as Partial<LayoutSettings>,
     };
   }
+  const currentUser = await fetchUserInfo();
   return {
+    // @ts-ignore
     fetchUserInfo,
+    currentUser,
     settings: defaultSettings as Partial<LayoutSettings>,
   };
+
 }
 
 // ProLayout 支持的api https://procomponents.ant.design/components/layout
@@ -52,20 +57,19 @@ export const layout: RunTimeLayoutConfig = ({initialState, setInitialState}) => 
   return {
     actionsRender: () => [<Question key="doc"/>],
     avatarProps: {
-      src: initialState?.currentUser?.avatar,
+      src: initialState?.currentUser?.avatarUrl,
       title: <AvatarName/>,
       render: (_, avatarChildren) => {
         return <AvatarDropdown>{avatarChildren}</AvatarDropdown>;
       },
     },
     waterMarkProps: {
-      content: initialState?.currentUser?.name,
+      content: initialState?.currentUser?.username,
     },
     footerRender: () => <Footer/>,
     onPageChange: () => {
       const {location} = history;
-      const whiteList = [loginPath, '/user/register'];
-      if (whiteList.includes(location.pathname)) {
+      if (NO_NEED_LOGIN_WHITE_LIST.includes(location.pathname)) {
         return;  // 不做鉴权
       }
       // 如果没有登录，重定向到 login
@@ -136,5 +140,5 @@ export const layout: RunTimeLayoutConfig = ({initialState, setInitialState}) => 
  * @doc https://umijs.org/docs/max/request#配置
  */
 export const request: RequestConfig = {
-  timeout: 100000,  // 超时时间
+  timeout: 100000,  // 超时时间 100s
 };

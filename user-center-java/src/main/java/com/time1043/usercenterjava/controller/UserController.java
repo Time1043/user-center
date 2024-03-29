@@ -58,6 +58,21 @@ public class UserController {
         return userService.userLogin(userAccount, userPassword, request);
     }
 
+    @GetMapping("/current")
+    public User getCurrentUser(HttpServletRequest request) {
+        // 从请求中拿到登录态 cookie
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if (currentUser == null) {
+            return null;
+        }
+        // 数据库查询 (积分信息)
+        long userId = currentUser.getId();
+        User user = userService.getById(userId);
+        // todo 用户状态可能被封号
+        return userService.getSafetyUser(user);  // 脱敏
+    }
+
     @GetMapping("/search")
     public List<User> searchUsers(String username, HttpServletRequest request) {
         if (!isAdmin(request)) {

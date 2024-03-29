@@ -1,20 +1,13 @@
 import {Footer} from '@/components';
 import {register} from '@/services/ant-design-pro/api';
-import {
-  AlipayCircleOutlined,
-  LockOutlined,
-  TaobaoCircleOutlined,
-  UserOutlined,
-  WeiboCircleOutlined,
-} from '@ant-design/icons';
-import {LoginForm, ProFormCheckbox, ProFormText,} from '@ant-design/pro-components';
-import {Helmet, history, useModel} from '@umijs/max';
-import {Alert, message, Tabs} from 'antd';
+import {LockOutlined, UserOutlined,} from '@ant-design/icons';
+import {LoginForm, ProFormText,} from '@ant-design/pro-components';
+import {Helmet, history} from '@umijs/max';
+import {message, Tabs} from 'antd';
 import {createStyles} from 'antd-style';
 import React, {useState} from 'react';
-import {flushSync} from 'react-dom';
 import Settings from '../../../../config/defaultSettings';
-import {GITHUB_LINK, SYSTEM_LOGO} from "@/constants";
+import {SYSTEM_LOGO} from "@/constants";
 
 const useStyles = createStyles(({token}) => {
   return {
@@ -51,36 +44,8 @@ const useStyles = createStyles(({token}) => {
     },
   };
 });
-const ActionIcons = () => {
-  const {styles} = useStyles();
-  return (
-    <>
-      <AlipayCircleOutlined key="AlipayCircleOutlined" className={styles.action}/>
-      <TaobaoCircleOutlined key="TaobaoCircleOutlined" className={styles.action}/>
-      <WeiboCircleOutlined key="WeiboCircleOutlined" className={styles.action}/>
-    </>
-  );
-};
-const Lang = () => {
-  const {styles} = useStyles();
-  return;
-};
-const LoginMessage: React.FC<{
-  content: string;
-}> = ({content}) => {
-  return (
-    <Alert
-      style={{
-        marginBottom: 24,
-      }}
-      message={content}
-      type="error"
-      showIcon
-    />
-  );
-};
+
 const Register: React.FC = () => {
-  const [userLoginState, setUserLoginState] = useState<API.LoginResult>({});
   const [type, setType] = useState<string>('account');
   const {styles} = useStyles();
 
@@ -100,19 +65,19 @@ const Register: React.FC = () => {
         const defaultLoginSuccessMessage = '注册成功！';
         message.success(defaultLoginSuccessMessage);
 
-        // const urlParams = new URL(window.location.href).searchParams;
-        // history.push(urlParams.get('redirect') || '/');
-        history.push('/user/login');
+        const urlParams = new URL(window.location.href).searchParams;
+        history.push(urlParams.get('redirect') || '/');
+        // history.push('/user/login');
         return;
+      } else {
+        throw new Error(`register error id = ${id}`);
       }
-      setUserLoginState(user);
     } catch (error) {
       const defaultLoginFailureMessage = '注册失败，请重试！';
       console.log(error);
       message.error(defaultLoginFailureMessage);
     }
   };
-  const {status, type: loginType} = userLoginState;
   return (
     <div className={styles.container}>
       <Helmet>
@@ -159,9 +124,6 @@ const Register: React.FC = () => {
             ]}
           />
 
-          {status === 'error' && loginType === 'account' && (
-            <LoginMessage content={'错误的账户和密码'}/>
-          )}
           {type === 'account' && (
             <>
               <ProFormText

@@ -76,14 +76,7 @@
 
   部署：服务器、容器(平台)
 
-- ant design家族
-
-  ant design 组件库 (封装了react)
-
-  [ant design procomponents](https://procomponents.ant.design/components/form)  面向业务 定制化 (封装了ant design)
-
-  ant design pro 后台管理系统 (由ant design、react、ant design procomponents及其他库组成)
-
+  
 
 
 - 计划
@@ -104,6 +97,7 @@
   
   - 后端：用户管理接口 (用户查询 状态更改)
   - 前端：开发；前端代码瘦身
+  - 优化：注册失败返回-1不友好
   
   校验用户：星球用户
   
@@ -199,6 +193,24 @@
   rm -rf playwright.config.ts 
   ```
   
+  
+
+- ant design家族
+
+  ant design 组件库 (封装了react)
+
+  [ant design procomponents](https://procomponents.ant.design/components/form)  面向业务 定制化 (封装了ant design)
+
+  ant design pro 后台管理系统 (由ant design、react、ant design procomponents及其他库组成)
+
+- ant design pro (umi框架) 的文件结构
+
+  `app.tsx` 项目全局入口文件，定义了整个项目中使用的公共数据 (如用户信息)
+
+  首次访问页面或刷新页面，进入app.tsx执行getInitialState方法，该方法的返回值就是全局可用的状态值
+
+  `access.ts` 控制用户的访问权限
+
   
 
 
@@ -605,6 +617,11 @@
        */
       @Override
       public User getSafetyUser(User originalUser) {
+          // 空处理
+          if (originalUser == null) {
+              return null;
+          }
+  
           User safetyUser = new User();
           safetyUser.setId(originalUser.getId());
           safetyUser.setUsername(originalUser.getUsername());
@@ -783,6 +800,21 @@
           return userService.userLogin(userAccount, userPassword, request);
       }
   
+      @GetMapping("/current")
+      public User getCurrentUser(HttpServletRequest request) {
+          // 从请求中拿到登录态 cookie
+          Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+          User currentUser = (User) userObj;
+          if (currentUser == null) {
+              return null;
+          }
+          // 数据库查询 (积分信息)
+          long userId = currentUser.getId();
+          User user = userService.getById(userId);
+          // todo 用户状态可能被封号
+          return userService.getSafetyUser(user);  // 脱敏
+      }
+  
       @GetMapping("/search")
       public List<User> searchUsers(String username, HttpServletRequest request) {
           if (!isAdmin(request)) {
@@ -937,7 +969,7 @@
   }
   ```
   
-  1
+  
 
 
 
@@ -962,10 +994,25 @@
 
   D:\code2\java-code\user-center\web-ts\src\components\Footer\index.tsx (删)
 
-  D:\code2\java-code\user-center\web-ts\src\services\ant-design-pro\typings.d.ts (修改请求数据结构 仅是约束规范) (index.tsx传参名称)
+  D:\code2\java-code\user-center\web-ts\src\services\ant-design-pro\typings.d.ts (修改请求数据结构 仅约束规范) (index.tsx传参名称)
 
   ```typescript
   
+  declare namespace API {
+    type CurrentUser = {
+      id: number,
+      username?: string,
+      userAccount?: string,
+      avatarUrl?: string,
+      gender?: number,
+      phone?: string,
+      email?: string,
+      userStatus?: number,
+      createTime?: Date,
+      userRole?: number,
+    };
+  
+      
     type LoginParams = {
       userAccount?: string;
       userPassword?: string;
@@ -977,7 +1024,7 @@
       userAccount?: string;
       userPassword?: string;
       checkPassword?: string;
-      type?: string;
+      type?: string;4
     };
     
     type RegisterResult = number;
@@ -990,7 +1037,7 @@
 
   ajax、axios封装ajax
 
-  D:\code2\java-code\user-center\web-ts\src\pages\User\Login\index.tsx 
+  D:\code2\java-code\user-center\web-ts\src\pages\User\Login\index.tsx  (很多修改)
 
   ```tsx
   
@@ -1003,11 +1050,215 @@
 
   D:\code2\java-code\user-center\web-ts\src\pages\User\Register\index.tsx (html css js 追溯源码修改封装的页面文字)
 
+  ```tsx
+  import {Footer} from '@/components';
+  import {register} from '@/services/ant-design-pro/api';
+  import {LockOutlined, UserOutlined,} from '@ant-design/icons';
+  import {LoginForm, ProFormText,} from '@ant-design/pro-components';
+  import {Helmet, history} from '@umijs/max';
+  import {message, Tabs} from 'antd';
+  import {createStyles} from 'antd-style';
+  import React, {useState} from 'react';
+  import Settings from '../../../../config/defaultSettings';
+  import {SYSTEM_LOGO} from "@/constants";
   
+  const useStyles = createStyles(({token}) => {
+    return {
+      action: {
+        marginLeft: '8px',
+        color: 'rgba(0, 0, 0, 0.2)',
+        fontSize: '24px',
+        verticalAlign: 'middle',
+        cursor: 'pointer',
+        transition: 'color 0.3s',
+        '&:hover': {
+          color: token.colorPrimaryActive,
+        },
+      },
+      lang: {
+        width: 42,
+        height: 42,
+        lineHeight: '42px',
+        position: 'fixed',
+        right: 16,
+        borderRadius: token.borderRadius,
+        ':hover': {
+          backgroundColor: token.colorBgTextHover,
+        },
+      },
+      container: {
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        overflow: 'auto',
+        backgroundImage:
+          "url('https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/V-_oS6r-i7wAAAAAAAAAAAAAFl94AQBr')",
+        backgroundSize: '100% 100%',
+      },
+    };
+  });
+  
+  const Register: React.FC = () => {
+    const [type, setType] = useState<string>('account');
+    const {styles} = useStyles();
+  
+    // 表单提交
+    const handleSubmit = async (values: API.RegisterParams) => {
+      // 前端校验 为后端分摊压力
+      const {userPassword, checkPassword} = values;
+      if (userPassword !== checkPassword) {
+        message.error('两次输入的密码不一致，请重新输入！');
+        return;
+      }
+  
+      try {
+        // 注册
+        const id = await register(values);
+        if (id > 0) {
+          const defaultLoginSuccessMessage = '注册成功！';
+          message.success(defaultLoginSuccessMessage);
+  
+          const urlParams = new URL(window.location.href).searchParams;
+          history.push(urlParams.get('redirect') || '/');
+          // history.push('/user/login');
+          return;
+        } else {
+          throw new Error(`register error id = ${id}`);
+        }
+      } catch (error) {
+        const defaultLoginFailureMessage = '注册失败，请重试！';
+        console.log(error);
+        message.error(defaultLoginFailureMessage);
+      }
+    };
+    return (
+      <div className={styles.container}>
+        <Helmet>
+          <title>
+            {'注册'}- {Settings.title}
+          </title>
+        </Helmet>
+        {/*<Lang />*/}
+        <div
+          style={{
+            flex: '1',
+            padding: '32px 0',
+          }}
+        >
+          <LoginForm
+            submitter={{
+              searchConfig: {
+                submitText: '注册',
+              }
+            }}
+            contentStyle={{
+              minWidth: 280,
+              maxWidth: '75vw',
+            }}
+            logo={<img alt="logo" src={SYSTEM_LOGO}/>}
+            title="用户集成系统"
+            subTitle={'致力做全银河系最蹩脚的项目系统'}
+            initialValues={{
+              autoLogin: true,
+            }}
+            onFinish={async (values) => {
+              await handleSubmit(values as API.RegisterParams);
+            }}
+          >
+            <Tabs
+              activeKey={type}
+              onChange={setType}
+              centered
+              items={[
+                {
+                  key: 'account',
+                  label: '账户密码注册',
+                },
+              ]}
+            />
+  
+            {type === 'account' && (
+              <>
+                <ProFormText
+                  name="userAccount"
+                  fieldProps={{
+                    size: 'large',
+                    prefix: <UserOutlined/>,
+                  }}
+                  placeholder={'请输入账户'}
+                  rules={[
+                    {
+                      required: true,
+                      message: '账户是必填项！',
+                    },
+                  ]}
+                />
+                <ProFormText.Password
+                  name="userPassword"
+                  fieldProps={{
+                    size: 'large',
+                    prefix: <LockOutlined/>,
+                  }}
+                  placeholder={'请输入密码'}
+                  rules={[
+                    {
+                      required: true,
+                      message: '密码是必填项！',
+                    },
+                    {
+                      min: 8,
+                      type: 'string',
+                      message: '密码长度必须大于等于 8 位！',
+                    },
+                  ]}
+                />
+                <ProFormText.Password
+                  name="checkPassword"
+                  fieldProps={{
+                    size: 'large',
+                    prefix: <LockOutlined/>,
+                  }}
+                  placeholder={'请再次输入密码'}
+                  rules={[
+                    {
+                      required: true,
+                      message: '密码是必填项！',
+                    },
+                    {
+                      min: 8,
+                      type: 'string',
+                      message: '密码长度必须大于等于 8 位！',
+                    },
+                  ]}
+                />
+              </>
+            )}
+            <div
+              style={{
+                marginBottom: 24,
+              }}
+            >
+            </div>
+          </LoginForm>
+        </div>
+        <Footer/>
+      </div>
+    );
+  };
+  export default Register;
+  ```
 
   D:\code2\java-code\user-center\web-ts\src\services\ant-design-pro\api.ts
 
   ```typescript
+  
+  /** 获取当前的用户 GET /api/user/current */
+  export async function currentUser(options?: { [key: string]: any }) {
+    return request<API.CurrentUser>('/api/user/current', {
+      method: 'GET',
+      ...(options || {}),
+    });
+  }
   
   /** 登录接口 POST /api/user/login */
   export async function login(body: API.LoginParams, options?: { [key: string]: any }) {
@@ -1040,6 +1291,141 @@
   `history.push()` 白名单
 
   ```tsx
+  import {AvatarDropdown, AvatarName, Footer, Question} from '@/components';
+  import {currentUser as queryCurrentUser} from '@/services/ant-design-pro/api';
+  import {LinkOutlined} from '@ant-design/icons';
+  import type {Settings as LayoutSettings} from '@ant-design/pro-components';
+  import {SettingDrawer} from '@ant-design/pro-components';
+  import type {RunTimeLayoutConfig} from '@umijs/max';
+  import {history, Link} from '@umijs/max';
+  import defaultSettings from '../config/defaultSettings';
+  import type {RequestConfig} from 'umi';
+  
+  const isDev = process.env.NODE_ENV === 'development';
+  const loginPath = '/user/login';
+  /**
+   * 无需用户登录态的白名单页面
+   */
+  const NO_NEED_LOGIN_WHITE_LIST = [loginPath, '/user/register'];
+  
+  /**
+   * @see  https://umijs.org/zh-CN/plugins/plugin-initial-state
+   * */
+  export async function getInitialState(): Promise<{
+    settings?: Partial<LayoutSettings>;
+    currentUser?: API.CurrentUser;
+    loading?: boolean;
+    fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
+  }> {
+    const fetchUserInfo = async () => {
+      try {
+        return await queryCurrentUser({
+          skipErrorHandler: true,
+        });
+      } catch (error) {
+        // history.push(loginPath);
+      }
+      return undefined;
+    };
+    // 如果是无需登录页面，不执行，不需要获取用户当前信息
+    if (NO_NEED_LOGIN_WHITE_LIST.includes(history.location.pathname)) {
+      return {
+        // @ts-ignore
+        fetchUserInfo,
+        settings: defaultSettings as Partial<LayoutSettings>,
+      };
+    }
+    const currentUser = await fetchUserInfo();
+    return {
+      // @ts-ignore
+      fetchUserInfo,
+      currentUser,
+      settings: defaultSettings as Partial<LayoutSettings>,
+    };
+  
+  }
+  
+  // ProLayout 支持的api https://procomponents.ant.design/components/layout
+  export const layout: RunTimeLayoutConfig = ({initialState, setInitialState}) => {
+    return {
+      actionsRender: () => [<Question key="doc"/>],
+      avatarProps: {
+        src: initialState?.currentUser?.avatarUrl,
+        title: <AvatarName/>,
+        render: (_, avatarChildren) => {
+          return <AvatarDropdown>{avatarChildren}</AvatarDropdown>;
+        },
+      },
+      waterMarkProps: {
+        content: initialState?.currentUser?.username,
+      },
+      footerRender: () => <Footer/>,
+      onPageChange: () => {
+        const {location} = history;
+        if (NO_NEED_LOGIN_WHITE_LIST.includes(location.pathname)) {
+          return;  // 不做鉴权
+        }
+        // 如果没有登录，重定向到 login
+        if (!initialState?.currentUser && location.pathname !== loginPath) {
+          history.push(loginPath);
+        }
+      },
+      bgLayoutImgList: [
+        {
+          src: 'https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/D2LWSqNny4sAAAAAAAAAAAAAFl94AQBr',
+          left: 85,
+          bottom: 100,
+          height: '303px',
+        },
+        {
+          src: 'https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/C2TWRpJpiC0AAAAAAAAAAAAAFl94AQBr',
+          bottom: -68,
+          right: -45,
+          height: '303px',
+        },
+        {
+          src: 'https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/F6vSTbj8KpYAAAAAAAAAAAAAFl94AQBr',
+          bottom: 0,
+          left: 0,
+          width: '331px',
+        },
+      ],
+      links: isDev
+        ? [
+          <Link key="openapi" to="/umi/plugin/openapi" target="_blank">
+            <LinkOutlined/>
+            <span>OpenAPI 文档</span>
+          </Link>,
+        ]
+        : [],
+      menuHeaderRender: undefined,
+      // 自定义 403 页面
+      // unAccessible: <div>unAccessible</div>,
+      // 增加一个 loading 的状态
+      childrenRender: (children) => {
+        // if (initialState?.loading) return <PageLoading />;
+        return (
+          <>
+            {children}
+            {isDev && (
+              <SettingDrawer
+                disableUrlParams
+                enableDarkTheme
+                settings={initialState?.settings}
+                onSettingChange={(settings) => {
+                  setInitialState((preInitialState) => ({
+                    ...preInitialState,
+                    settings,
+                  }));
+                }}
+              />
+            )}
+          </>
+        );
+      },
+      ...initialState?.settings,
+    };
+  };
   
   /**
    * @name request 配置，可以配置错误处理
@@ -1047,7 +1433,7 @@
    * @doc https://umijs.org/docs/max/request#配置
    */
   export const request: RequestConfig = {
-    timeout: 100000,  // 超时时间
+    timeout: 100000,  // 超时时间 100s
   };
   
   ```
@@ -1092,19 +1478,85 @@
 
   D:\code2\java-code\user-center\web-ts\config\routes.ts
 
+  ```typescript
+  export default [
+    {
+      path: '/user',
+      layout: false,
+      routes: [
+        {name: '登录', path: '/user/login', component: './User/Login'},
+        {name: '注册', path: '/user/register', component: './User/Register'},
+      ],
+    },
+    {path: '/welcome', name: '欢迎', icon: 'smile', component: './Welcome'},
+    {
+      path: '/admin',
+      name: '管理页',
+      icon: 'crown',
+      access: 'canAdmin',  // 鉴权
+      routes: [
+        {path: '/admin', redirect: '/admin/sub-page'},
+        {path: '/admin/sub-page', name: '二级管理页', component: './Admin'},
+        {path: '/admin/user-manage', name: '用户管理', component: './Admin/UserManage'},
+      ],
+    },
+    {name: '查询表格', icon: 'table', path: '/list', component: './TableList'},
+    {path: '/', redirect: '/welcome'},
+    {path: '*', layout: false, component: './404'},
+  ];
+  
+  ```
+
+  
+
+- 前端获取用户登录态
+
+  后端接口  
+
+  D:\code2\java-code\user-center\user-center-java\src\main\java\com\time1043\usercenterjava\controller\UserController.java
+
+  前端接口 `http://localhost:8000/api/user/current`
+
+  D:\code2\java-code\user-center\web-ts\src\components\RightContent\AvatarDropdown.tsx (修改名字)
+
   
 
   
-
-  1
-
-
 
 ‘
 
 ## 用户管理后台的前后端开发
 
+- 前端页面
 
+  ```
+  mkdir src/pages/Admin
+  cp
+  
+  ```
+
+  D:\code2\java-code\user-center\web-ts\src\pages\TableList\index.tsx (提供的模板 很复杂)
+
+  
+
+  前端的鉴权
+
+  D:\code2\java-code\user-center\web-ts\src\access.ts (鉴权规则)
+
+  ```typescript
+  /**
+   * @see https://umijs.org/docs/max/access#access
+   * */
+  export default function access(initialState: { currentUser?: API.CurrentUser } | undefined) {
+    const { currentUser } = initialState ?? {};
+    return {
+      canAdmin: currentUser && currentUser.userRole === 1,
+    };
+  }
+  
+  ```
+
+  1
 
 
 

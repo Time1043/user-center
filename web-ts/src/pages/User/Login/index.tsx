@@ -9,12 +9,13 @@ import {
 } from '@ant-design/icons';
 import {LoginForm, ProFormCheckbox, ProFormText,} from '@ant-design/pro-components';
 import {Helmet, history, useModel} from '@umijs/max';
-import {Alert, message, Tabs} from 'antd';
+import {Alert, Divider, message, Tabs} from 'antd';
 import {createStyles} from 'antd-style';
 import React, {useState} from 'react';
 import {flushSync} from 'react-dom';
 import Settings from '../../../../config/defaultSettings';
 import {GITHUB_LINK, SYSTEM_LOGO} from "@/constants";
+import {Link} from "@umijs/renderer-react";
 
 const useStyles = createStyles(({token}) => {
   return {
@@ -136,13 +137,19 @@ const Login: React.FC = () => {
           }}
           logo={<img alt="logo" src={SYSTEM_LOGO}/>}
           title="用户集成系统"
-          subTitle={'致力做全银河系最蹩脚的项目系统'}
-          initialValues={{
-            autoLogin: true,
-          }}
-          onFinish={async (values) => {
-            await handleSubmit(values as API.LoginParams);
-          }}
+          subTitle={
+            <p>致力做全银河系最蹩脚的项目系统</p>
+          }
+          initialValues={
+            {
+              autoLogin: true,
+            }
+          }
+          onFinish={
+            async (values) => {
+              await handleSubmit(values as API.LoginParams);
+            }
+          }
         >
           <Tabs
             activeKey={type}
@@ -156,46 +163,50 @@ const Login: React.FC = () => {
             ]}
           />
 
-          {status === 'error' && loginType === 'account' && (
-            <LoginMessage content={'错误的账户和密码'}/>
-          )}
-          {type === 'account' && (
-            <>
-              <ProFormText
-                name="userAccount"
-                fieldProps={{
-                  size: 'large',
-                  prefix: <UserOutlined/>,
-                }}
-                placeholder={'请输入账户'}
-                rules={[
-                  {
-                    required: true,
-                    message: '账户是必填项！',
-                  },
-                ]}
-              />
-              <ProFormText.Password
-                name="userPassword"
-                fieldProps={{
-                  size: 'large',
-                  prefix: <LockOutlined/>,
-                }}
-                placeholder={'请输入密码'}
-                rules={[
-                  {
-                    required: true,
-                    message: '密码是必填项！',
-                  },
-                  {
-                    min: 8,
-                    type: 'string',
-                    message: '密码长度必须大于等于 8 位！',
-                  },
-                ]}
-              />
-            </>
-          )}
+          {
+            status === 'error' && loginType === 'account' && (
+              <LoginMessage content={'错误的账户和密码'}/>
+            )
+          }
+          {
+            type === 'account' && (
+              <>
+                <ProFormText
+                  name="userAccount"
+                  fieldProps={{
+                    size: 'large',
+                    prefix: <UserOutlined/>,
+                  }}
+                  placeholder={'请输入账户'}
+                  rules={[
+                    {
+                      required: true,
+                      message: '账户是必填项！',
+                    },
+                  ]}
+                />
+                <ProFormText.Password
+                  name="userPassword"
+                  fieldProps={{
+                    size: 'large',
+                    prefix: <LockOutlined/>,
+                  }}
+                  placeholder={'请输入密码'}
+                  rules={[
+                    {
+                      required: true,
+                      message: '密码是必填项！',
+                    },
+                    {
+                      min: 8,
+                      type: 'string',
+                      message: '密码长度必须大于等于 8 位！',
+                    },
+                  ]}
+                />
+              </>
+            )
+          }
           <div
             style={{
               marginBottom: 24,
@@ -204,6 +215,9 @@ const Login: React.FC = () => {
             <ProFormCheckbox noStyle name="autoLogin">
               自动登录
             </ProFormCheckbox>
+            <Divider type="vertical"/>
+            <Link to="/user/register">新用户注册</Link>
+            <Divider type="vertical"/>
             <a
               style={{
                 float: 'right',
@@ -211,13 +225,14 @@ const Login: React.FC = () => {
               href={GITHUB_LINK}
               target="_blank"
             >
-              忘记密码请联系站长
+              忘记密码联系站长
             </a>
           </div>
         </LoginForm>
       </div>
       <Footer/>
     </div>
-  );
+  )
+    ;
 };
 export default Login;
