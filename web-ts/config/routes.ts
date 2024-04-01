@@ -15,7 +15,7 @@ export default [
     access: 'canAdmin',  // 鉴权 全局读取
     routes: [
       {path: '/admin', redirect: '/admin/sub-page'},
-      {path: '/admin/sub-page', name: '二级管理页', component: './Admin'},
+      // {path: '/admin/sub-page', name: '二级管理页', component: './Admin'},
       {path: '/admin/user-manage', name: '用户管理', component: './Admin/UserManage'},
     ],
   },

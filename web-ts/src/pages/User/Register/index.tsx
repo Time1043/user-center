@@ -103,7 +103,7 @@ const Register: React.FC = () => {
             maxWidth: '75vw',
           }}
           logo={<img alt="logo" src={SYSTEM_LOGO}/>}
-          title="用户集成系统"
+          title="沉石用户系统"
           subTitle={'致力做全银河系最蹩脚的项目系统'}
           initialValues={{
             autoLogin: true,

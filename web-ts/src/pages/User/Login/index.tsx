@@ -136,7 +136,7 @@ const Login: React.FC = () => {
             maxWidth: '75vw',
           }}
           logo={<img alt="logo" src={SYSTEM_LOGO}/>}
-          title="用户集成系统"
+          title="沉石集成系统"
           subTitle={
             <p>致力做全银河系最蹩脚的项目系统</p>
           }

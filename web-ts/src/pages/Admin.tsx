@@ -6,7 +6,7 @@ const Admin: React.FC = (props) => {
   // @ts-ignore
   const {children} = props;
   return (
-    <PageContainer content={' 这个页面只有 admin 权限才能查看'}>
+    <PageContainer content={' admin 权限'}>
       {children}
     </PageContainer>
   );
